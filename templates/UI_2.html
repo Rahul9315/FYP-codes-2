@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NID system</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            background: linear-gradient(to right, #007BFF, #00D4FF);
+            color: #fff;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        nav {
+            margin-top: 1rem;
+        }
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 1rem;
+            font-weight: bold;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .content {
+            padding: 2rem 1rem;
+            max-width: 1400px;
+            margin: auto;
+        }
+        .content h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #007BFF;
+        }
+        
+        .top {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .top-left, .top-right {
+            flex: 1;
+            width: 100%;
+            background: rgb(226, 226, 227);
+            margin: 10px;
+            padding: 20px;
+            min-height: 500px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007BFF;
+            color: #fff;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        footer {
+            text-align: center;
+            background: #007BFF;
+            color: #fff;
+            padding: 1rem 0;
+            margin-top: 2rem;
+        }
+        footer p {
+            margin: 0;
+        }
+
+        .packet-box { padding: 2px; border: 0.05px solid #b7b9bb; margin: 2px; display: inline-block; width: 95%; font-size: 14px; }
+        .normal { background: #d4edda; color: #155724; }
+        .anomaly { background: #f8d7da; color: #721c24; }
+
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Network Intrusion Detection UI</h1>
+        <nav>
+            <a href="#about">About</a>
+            
+            <a href="#detection">Detection</a>
+        </nav>
+    </header>
+
+    <section class="content" id="detection">
+        <h2>Detect Intrusion</h2>
+
+        
+         
+            <div class="top">
+                <div class="top-left">
+                    <p><strong>System IP Address:</strong> <span id="system-ip">Loading...</span></p>
+                    <p><strong>No. of Packets Scanned:</strong> <span id="packet-count">0</span></p>
+                 
+                    
+                    <button onclick="startCapture()">Start Packet Capture</button>
+                    <button style="background: red;" onclick="stopCapture()">Stop Packet Capture</button>
+                </div>
+                <div class="top-right">
+                    <p><strong>Filter Anomaly IPs with Block Features (only unique ip)</strong></p>
+                    <div style=" max-height: 420px; ; overflow-y: auto; margin-top: 10px; " id="anomaly-container"></div>
+
+                </div>
+
+                <div class="top-right">
+                    <p><strong>Pie Graph</strong></p>
+                    <div id="pie-chart"></div>
+                </div>
+            </div>
+
+            <div class="top">
+                
+                <div class="top-right">
+                    <p><strong>Live Line Graph with packets length for Anomaly only</strong></p>                   
+                    <div style="max-width: 100%;" id="live-graph"></div>
+                    
+                </div>
+                
+            </div>
+
+            
+
+
+            <div class="top">
+                
+                <div class="top-left">
+                    <p><strong></strong></p>
+                    <p>Live Packets</p>
+                    <button>Download CSV Report</button>
+                    <div style=" max-height: 385px; ; overflow-y: auto; margin-top: 10px; " id="packet-container"></div>
+
+                    <script>
+                        var socket = io.connect("http://" + document.domain + ":" + location.port);
+                
+                        function startCapture() {
+                            socket.emit("start_capture");
+                        }
+
+                        function stopCapture() {
+                            socket.emit("stop_capture");  // Notify the backend to stop capturing packets
+                        }
+
+                        // Initialize Data Arrays
+                        var timestamps = [];
+                        var packetLengths = [];
+
+                        // Create Initial Graph
+                        Plotly.newPlot("live-graph", [{
+                            x: [],
+                            y: [],
+                            mode: "lines",
+                            name: "Packet Length",
+                            line: { color: "red" }
+                        }], {
+                            title: "Live Packet Length Over Time",
+                            xaxis: { title: "Time" },
+                            yaxis: { title: "Packet Length (bytes)" }
+                        });
+
+                        let uniqueAnomalyIPs = new Set();
+                        
+                        var anomalyIPCount = {};  
+
+                
+                        socket.on("new_packet", function(data) {
+                            var packetDiv = document.createElement("div");
+                            packetDiv.className = "packet-box " + (data.status === "Anomaly" ? "anomaly" : "normal");
+                            packetDiv.innerHTML = `<strong>Packet:</strong> ${data.src_ip} → ${data.dst_ip} | <strong>Service:</strong> ${data.service} | <strong>Protocol:</strong> ${data.protocol} | <strong>Status:</strong> ${data.status}`;
+                            document.getElementById("packet-container").prepend(packetDiv);
+
+                            // Update system IP and packet count
+                            document.getElementById("system-ip").innerText = data.system_ip;
+                            document.getElementById("packet-count").innerText = data.packet_count;
+
+                            // If the packet is Anomaly, also display it in Anomaly section
+                            if (data.status === "Anomaly") {
+                                var anomalyDiv = document.createElement("div");
+                                anomalyDiv.className = "packet-box anomaly";
+                                
+                                // to be deleted later  Object to store counts of packets for each anomaly IP
+                                // Object to store counts of packets for each anomaly IP
+                                
+
+                                if (data.src_ip !== data.system_ip) {
+                                    // Check if the IP already exists in our tracking object
+                                    if (anomalyIPCount[data.src_ip]) {
+                                        anomalyIPCount[data.src_ip] += 1; // Increment count
+
+                                        // Update the packet count in the UI
+                                        var packetCountElement = document.getElementById(`count-${data.src_ip}`);
+                                        if (packetCountElement) {
+                                            packetCountElement.innerText = anomalyIPCount[data.src_ip];
+                                        }
+                                    } else {
+                                        // First occurrence of this IP, initialize count
+                                        anomalyIPCount[data.src_ip] = 1;
+
+                                        // Create a new div for the anomaly IP
+                                        var anomalyDiv = document.createElement("div");
+                                        anomalyDiv.className = "packet-box anomaly";
+                                        anomalyDiv.id = `anomaly-${data.src_ip}`; // Unique ID for the div
+
+                                        // Set inner HTML with a unique span for count updates
+                                        anomalyDiv.innerHTML = `<strong>Anomaly IP:</strong> ${data.src_ip} 
+                                                                <strong>Protocol:</strong> ${data.protocol} 
+                                                                <strong>Packets:</strong> <span id="count-${data.src_ip}">1</span>`;
+
+                                        // Prepend the new div to the container
+                                        document.getElementById("anomaly-container").prepend(anomalyDiv);
+                                    }
+                                }
+
+                                /*
+                                if (data.src_ip != data.system_ip) {
+                                    if (!uniqueAnomalyIPs.has(data.src_ip)) {
+                                        uniqueAnomalyIPs.add(data.src_ip); // Add to set
+                                        
+                                        var anomalyDiv = document.createElement("div");
+                                        anomalyDiv.className = "packet-box anomaly";
+                                        anomalyDiv.innerHTML = `<strong>Anomaly IP:</strong> ${data.src_ip} <strong>Protocol<strong> ${data.protocol}`;
+                                        document.getElementById("anomaly-container").prepend(anomalyDiv);
+                                    }
+                                }*/
+
+                                if (timestamps.length > 50) {
+                                    timestamps.shift();
+                                    packetLengths.shift();
+                                }
+
+                                // Update Graph it captures Anomaly only
+                                Plotly.update("live-graph", { x: [timestamps], y: [packetLengths] });
+
+                                    
+                            }
+
+                            timestamps.push(new Date(data.timestamp * 1000));  // Convert timestamp
+                            packetLengths.push(data.packet_length);
+
+                            Plotly.react("pie-chart", [{
+                                values: [data.count_Normal_Anomaly.normal, data.count_Normal_Anomaly.anomaly],
+                                labels: ["Normal", "Anomaly"],
+                                type: "pie",
+                                marker: { colors: ["#28a745", "#dc3545"] }
+                            }]);
+
+                            
+
+                        });
+                    </script>
+
+                </div>
+                
+            </div>
+        
+        
+    </section>
+
+    <footer>
+        <p>Note: Intrusion Detection Model provides above 90% of Accuracy.<br>This Model is not 100% Accurate.</p>
+    </footer>
+
+</body>
+</html>
