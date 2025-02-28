@@ -348,12 +348,12 @@ def capture_live_packets():
             predictiom = live_data_preprocessing_and_pridiction(Live_data)
 
             #prediction = dec_classifier.predict(Live_data)
-            if predictiom == 0 :
-                predictiom = "Normal"
-                count_Normal_Anomaly['normal'] += 1
-            else:
+            if (predictiom == 1 and src_ip != system_ip):
                 predictiom = "Anomaly"
                 count_Normal_Anomaly['anomaly'] += 1
+            else:
+                predictiom = "Normal"
+                count_Normal_Anomaly['normal'] += 1
 
             # Create the JSON object to send to the frontend
             packet_data_to_send = {

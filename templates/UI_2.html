@@ -111,8 +111,9 @@
                 <div class="top-left">
                     <p><strong>System IP Address:</strong> <span id="system-ip">Loading...</span></p>
                     <p><strong>No. of Packets Scanned:</strong> <span id="packet-count">0</span></p>
-                 
-                    
+                    <p><strong>Start Time: </strong> <span id="start-time">Not Started</span></p>
+                    <p><strong>End Time: </strong> <span id="end-time">Not Stopped</span></p>
+                    <p><strong>Duration: </strong> <span id="duration">0s</span></p>
                     <button onclick="startCapture()">Start Packet Capture</button>
                     <button style="background: red;" onclick="stopCapture()">Stop Packet Capture</button>
                 </div>
@@ -152,12 +153,42 @@
                     <script>
                         var socket = io.connect("http://" + document.domain + ":" + location.port);
                 
+                        let startTime;
+                        let durationInterval;
+
                         function startCapture() {
+                            startTime = new Date(); // Capture start time
+                            document.getElementById("start-time").innerText = startTime.toLocaleTimeString(); // Display start time
+                            document.getElementById("end-time").innerText = "Running..."; // Reset end time
+                            document.getElementById("duration").innerText = "0s"; // Reset duration
+
+                            // Start a live clock for duration
+                            durationInterval = setInterval(updateDuration, 1000);
+
+                            // Emit start event to backend (if needed)
                             socket.emit("start_capture");
                         }
 
                         function stopCapture() {
-                            socket.emit("stop_capture");  // Notify the backend to stop capturing packets
+                            let endTime = new Date(); // Capture end time
+                            document.getElementById("end-time").innerText = endTime.toLocaleTimeString(); // Display end time
+                            
+                            // Stop the duration clock
+                            clearInterval(durationInterval);
+                            updateDuration(); // Final update of duration
+
+                            // Emit stop event to backend (if needed)
+                            socket.emit("stop_capture");
+                        }
+
+                        function updateDuration() {
+                            if (startTime) {
+                                let now = new Date();
+                                let elapsedSeconds = Math.floor((now - startTime) / 1000);
+                                let minutes = Math.floor(elapsedSeconds / 60);
+                                let seconds = elapsedSeconds % 60;
+                                document.getElementById("duration").innerText = `${minutes}m ${seconds}s`;
+                            }
                         }
 
                         // Initialize Data Arrays
@@ -185,7 +216,7 @@
                         socket.on("new_packet", function(data) {
                             var packetDiv = document.createElement("div");
                             packetDiv.className = "packet-box " + (data.status === "Anomaly" ? "anomaly" : "normal");
-                            packetDiv.innerHTML = `<strong>Packet:</strong> ${data.src_ip} → ${data.dst_ip} | <strong>Service:</strong> ${data.service} | <strong>Protocol:</strong> ${data.protocol} | <strong>Status:</strong> ${data.status}`;
+                            packetDiv.innerHTML = `<strong>Size:</strong> ${data.packet_length} | <strong>Packet:</strong> ${data.src_ip} → ${data.dst_ip} | <strong>Service:</strong> ${data.service} | <strong>Protocol:</strong> ${data.protocol} | <strong>Status:</strong> ${data.status}`;
                             document.getElementById("packet-container").prepend(packetDiv);
 
                             // Update system IP and packet count
@@ -197,11 +228,11 @@
                                 var anomalyDiv = document.createElement("div");
                                 anomalyDiv.className = "packet-box anomaly";
                                 
-                                // to be deleted later  Object to store counts of packets for each anomaly IP
+                                // Object to store counts of packets for each anomaly IP
                                 // Object to store counts of packets for each anomaly IP
                                 
 
-                                if (data.src_ip !== data.system_ip) {
+                                if (data.src_ip !== data.system_ip ){//&& data.src_ip !== '192.168.1.254') {
                                     // Check if the IP already exists in our tracking object
                                     if (anomalyIPCount[data.src_ip]) {
                                         anomalyIPCount[data.src_ip] += 1; // Increment count
@@ -221,8 +252,8 @@
                                         anomalyDiv.id = `anomaly-${data.src_ip}`; // Unique ID for the div
 
                                         // Set inner HTML with a unique span for count updates
-                                        anomalyDiv.innerHTML = `<strong>Anomaly IP:</strong> ${data.src_ip} 
-                                                                <strong>Protocol:</strong> ${data.protocol} 
+                                        anomalyDiv.innerHTML = `<strong>IP:</strong> ${data.src_ip} 
+                                                                <strong>( ${data.protocol} ) </strong>
                                                                 <strong>Packets:</strong> <span id="count-${data.src_ip}">1</span>`;
 
                                         // Prepend the new div to the container
@@ -230,7 +261,7 @@
                                     }
                                 }
 
-                                /*
+                                /* to be deleted
                                 if (data.src_ip != data.system_ip) {
                                     if (!uniqueAnomalyIPs.has(data.src_ip)) {
                                         uniqueAnomalyIPs.add(data.src_ip); // Add to set
