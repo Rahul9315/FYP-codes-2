@@ -147,7 +147,7 @@
                 <div class="top-left">
                     <p><strong></strong></p>
                     <p>Live Packets</p>
-                    <button>Download CSV Report</button>
+                    <button onclick="downloadCSVFile()">Download CSV Report</button>
                     <div style=" max-height: 385px; ; overflow-y: auto; margin-top: 10px; " id="packet-container"></div>
 
                     <script>
@@ -168,6 +168,19 @@
                             // Emit start event to backend (if needed)
                             socket.emit("start_capture");
                         }
+
+                        function downloadCSVFile(){
+                            socket.emit("download_csv_file");
+                        }
+
+                        socket.on("csv_file_ready", function() {
+                            var link = document.createElement("a");
+                            link.href = "/download_csv"; // Flask route to serve the file
+                            link.download = "packet_data.csv"; // Suggested filename
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        });
 
                         function stopCapture() {
                             let endTime = new Date(); // Capture end time
@@ -228,9 +241,7 @@
                                 var anomalyDiv = document.createElement("div");
                                 anomalyDiv.className = "packet-box anomaly";
                                 
-                                // Object to store counts of packets for each anomaly IP
-                                // Object to store counts of packets for each anomaly IP
-                                
+                                // Object to store counts of packets for each anomaly IP                          
 
                                 if (data.src_ip !== data.system_ip ){//&& data.src_ip !== '192.168.1.254') {
                                     // Check if the IP already exists in our tracking object

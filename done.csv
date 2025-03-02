@@ -1,0 +1,4 @@
+Ethernet Type,Packet Length,Service,Source IP,Destination IP,Source Port,Destination Port,Protocol,TCP Flags,Checksum,TCP Window Size,ICMP Type,Class
+IPv6,118,TCP,2001:bb6:48d0:da00:21ed:e58c:867:81a7,2603:1020:5:9::402,56346,443,TLS,0x0018,0x3d58,511,0,Normal
+IPv6,249,TCP,2603:1020:5:9::402,2001:bb6:48d0:da00:21ed:e58c:867:81a7,443,56346,TLS,0x0018,0xe80a,7928,0,Normal
+IPv6,74,TCP,2001:bb6:48d0:da00:21ed:e58c:867:81a7,2603:1020:5:9::402,56346,443,TCP,0x0010,0x5d64,511,0,Anomaly

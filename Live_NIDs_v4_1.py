@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 import time
-import keyboard
+import os
+import csv
 import pyshark
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import train_test_split ,cross_val_score
@@ -13,7 +14,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
 import socket
-from flask import Flask, render_template
+from flask import Flask, render_template ,send_file
 from flask_socketio import SocketIO, emit
 
 
@@ -251,6 +252,19 @@ def get_system_ip(): ##used this method to detect IP regardless if I am using et
         return ip_address
     except Exception as e:
         return f"Error: {e}"
+    
+def download_csv_file():
+    
+    with open(csv_filename, mode='w' ,newline='') as file:
+        csv_writer = csv.writer(file)
+
+        #defining headers
+        headers_for_csv = ["Ethernet Type", "Packet Length", "Service", "Source IP", "Destination IP", "Source Port", "Destination Port", "Protocol", "TCP Flags", "Checksum", "TCP Window Size", "ICMP Type","Class"]
+        csv_writer.writerow(headers_for_csv)
+
+        # putting new packets data 
+        csv_writer.writerows(packet_data_for_csv_with_detection)
+        print(f"Data saved {csv_filename} here")
 
 
 
@@ -261,6 +275,8 @@ print("Capturing Live Packets & Predicting Anomalies...\n")
 
 # Store captured packet details
 packet_data = []
+packet_data_for_csv_with_detection = []
+csv_filename = "done.csv"
 
 def capture_live_packets():
 
@@ -277,6 +293,11 @@ def capture_live_packets():
             if capturing == 2 : # when capturing is false
                 print("\nStopping Live Capture...\n")
                 break  # Exit loop when stop button is clicked
+
+            #if capturing == 3 :
+                
+            #    print("\n\n\n\n\ndownload success /n*************************************************************************************************")
+             #   break
 
             packet_counter += 1  # Increment packet count
 
@@ -373,10 +394,10 @@ def capture_live_packets():
             socketio.emit("new_packet", packet_data_to_send)
 
             # Display Real-Time Results
-            print(f"Packet: {src_ip} → {dst_ip} | Service: {service} | Protocol: {protocol_name} | Network Satatus: {predictiom}")
+            print(f"Packet: {src_ip} → {dst_ip} |Service: {service} | Protocol: {protocol_name} | Network Satatus: {predictiom}")
 
             # Store Packet Data for CSV
-            #packet_data.append([eth_type, packet_length, service, src_ip, dst_ip, src_port, dst_port, protocol_name, tcp_flags, checksum, tcp_window_size, icmp_type, predicted_class])
+            packet_data_for_csv_with_detection.append([eth_type, packet_length, service, src_ip, dst_ip, src_port, dst_port, protocol_name, tcp_flags, checksum, tcp_window_size, icmp_type, predictiom])
 
         except Exception as e:
             print(f"Error processing packet: {e}\n")
@@ -385,8 +406,10 @@ def capture_live_packets():
 # Route for HTML Page
 @app.route("/")
 def index():
+    # these variables will run just when we refresh the web pages
     global packet_counter, count_Normal_Anomaly  # Ensure we modify global variables
     packet_counter = 0  # Reset packet count
+    packet_data_for_csv_with_detection.clear() # Empty the packets list 
     count_Normal_Anomaly = {"normal": 0, "anomaly": 0}  # Reset anomaly/normal counts
     return render_template("UI_2.html")
 
@@ -403,6 +426,28 @@ def stop_capture():
     global capturing
     capturing = 2
     print("Packet Capture Stopped.")
+
+# this function gets into action when download csv button os pressed
+@socketio.on("download_csv_file") 
+def download_csv():
+    if os.path.exists(csv_filename): # deleteing the old downloaded csv file before path before a new csv file is created
+        os.remove(csv_filename)
+        
+    download_csv_file() # this function creates the csv file and save it in the current directory
+    socketio.emit("csv_file_ready") # sending msg to frontend browser that file ready for download
+    print("Packet Captured and download file data.")
+
+# this function takes the csv file named "csv_filename" and let the browser downloads it
+@app.route("/download_csv")
+def serve_download_csv():
+    if os.path.exists(csv_filename):
+        return send_file(
+            csv_filename,
+            as_attachment=True,
+            download_name="packet_data.csv",  # Forces browser to show "Save As" dialog
+            mimetype="text/csv"
+        )
+    return "CSV file not found", 404
 
 # Run Flask App
 if __name__ == "__main__":
