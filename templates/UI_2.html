@@ -124,8 +124,9 @@
                 </div>
 
                 <div class="top-right">
-                    <p><strong>Pie Graph</strong></p>
-                    <div id="pie-chart"></div>
+                    <p><strong>Blocked IP Addresses: </strong></p>
+                    <div style=" max-height: 420px; ; overflow-y: auto; margin-top: 10px; " id="blocked-container"></div>
+
                 </div>
             </div>
 
@@ -135,6 +136,11 @@
                     <p><strong>Live Line Graph with packets length for Anomaly only</strong></p>                   
                     <div style="max-width: 100%;" id="live-graph"></div>
                     
+                </div>
+
+                <div class="top-right">
+                    <p><strong>Pie Graph</strong></p>
+                    <div id="pie-chart"></div>
                 </div>
                 
             </div>
@@ -155,6 +161,10 @@
                 
                         let startTime;
                         let durationInterval;
+
+                        // Initialize Data Arrays
+                        var timestamps = [];
+                        var packetLengths = [];
 
                         function startCapture() {
                             startTime = new Date(); // Capture start time
@@ -194,6 +204,36 @@
                             socket.emit("stop_capture");
                         }
 
+                        
+                        // Function to fetch and display blocked IPs in "blocked-container"
+                        function loadBlockedIPs() {
+                            fetch("http://127.0.0.1:5001/blocked_ips")
+                                .then(response => response.json())
+                                .then(data => {
+                                    let blockedContainer = document.getElementById("blocked-container");
+                                    blockedContainer.innerHTML = "";
+
+                                    data.blocked_ips.forEach(ipObj => {
+                                        let blockedDiv = document.createElement("div");
+                                        blockedDiv.className = "packet-box blocked"; // Similar styling as anomaly-container
+
+                                        // Create "Unblock IP" button
+                                        let unblockButton = document.createElement("a");
+                                        unblockButton.innerText = "Unblock IP";
+                                        unblockButton.href = "#";
+                                        unblockButton.className = "block-link";
+                                        unblockButton.onclick = function(event) {
+                                            event.preventDefault();
+                                            unblockIP(ipObj.ip_address); // Call function to unblock IP
+                                        };
+
+                                        blockedDiv.innerHTML = `<strong>Blocked IP:</strong> ${ipObj.ip_address} <strong>Status:</strong> ${ipObj.status}  .`;
+                                        blockedDiv.appendChild(unblockButton);
+                                        blockedContainer.prepend(blockedDiv);
+                                    });
+                                });
+                        }
+
                         function updateDuration() {
                             if (startTime) {
                                 let now = new Date();
@@ -204,9 +244,45 @@
                             }
                         }
 
-                        // Initialize Data Arrays
-                        var timestamps = [];
-                        var packetLengths = [];
+                        // Function to block an IP when the "Block IP" button is clicked
+                        function blockIP(ip) {
+                            fetch("http://127.0.0.1:5001/block_ip", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ ip: ip })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert(`IP ${ip} has been blocked and saved to the database.`);
+                                    loadBlockedIPs(); // Refresh the blocked IPs list
+                                } else {
+                                    alert("Error blocking IP. Please try again.");
+                                }
+                            })
+                            .catch(error => console.error("Error:", error));
+                        }
+
+                        // Function to unblock an IP when "Unblock IP" is clicked
+                        function unblockIP(ip) {
+                            fetch("http://127.0.0.1:5001/unblock_ip", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ ip: ip })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert(`IP ${ip} has been unblocked and removed from the database.`);
+                                    loadBlockedIPs();
+                                } else {
+                                    alert("Error unblocking IP. Please try again.");
+                                }
+                            })
+                            .catch(error => console.error("Error:", error));
+                        }
+
+                        
 
                         // Create Initial Graph
                         Plotly.newPlot("live-graph", [{
@@ -262,27 +338,30 @@
                                         anomalyDiv.className = "packet-box anomaly";
                                         anomalyDiv.id = `anomaly-${data.src_ip}`; // Unique ID for the div
 
+                                        // Create an anchor element (styled as a button)
+                                        var blockLink = document.createElement("a");
+                                        blockLink.innerText = "Block IP";
+                                        blockLink.href = "#";  // Prevents page reload
+                                        blockLink.className = "block-link"; // Apply CSS styling
+
+                                        // On click, prevent default link behavior and call the function
+                                        blockLink.onclick = function(event) {
+                                            event.preventDefault();  // Prevents the anchor from navigating
+                                            blockIP(data.src_ip);  // Call function to save the IP
+                                        };
+
                                         // Set inner HTML with a unique span for count updates
                                         anomalyDiv.innerHTML = `<strong>IP:</strong> ${data.src_ip} 
                                                                 <strong>( ${data.protocol} ) </strong>
-                                                                <strong>Packets:</strong> <span id="count-${data.src_ip}">1</span>`;
+                                                                <strong>Packets:</strong> <span id="count-${data.src_ip}">1</span>    `;
+
+                                        // Append the button
+                                        anomalyDiv.appendChild(blockLink);
 
                                         // Prepend the new div to the container
                                         document.getElementById("anomaly-container").prepend(anomalyDiv);
                                     }
                                 }
-
-                                /* to be deleted
-                                if (data.src_ip != data.system_ip) {
-                                    if (!uniqueAnomalyIPs.has(data.src_ip)) {
-                                        uniqueAnomalyIPs.add(data.src_ip); // Add to set
-                                        
-                                        var anomalyDiv = document.createElement("div");
-                                        anomalyDiv.className = "packet-box anomaly";
-                                        anomalyDiv.innerHTML = `<strong>Anomaly IP:</strong> ${data.src_ip} <strong>Protocol<strong> ${data.protocol}`;
-                                        document.getElementById("anomaly-container").prepend(anomalyDiv);
-                                    }
-                                }*/
 
                                 if (timestamps.length > 50) {
                                     timestamps.shift();
@@ -308,6 +387,8 @@
                             
 
                         });
+
+                        window.onload = loadBlockedIPs;
                     </script>
 
                 </div>

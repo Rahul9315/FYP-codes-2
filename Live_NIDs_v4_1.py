@@ -16,11 +16,13 @@ from sklearn.metrics import classification_report
 import socket
 from flask import Flask, render_template ,send_file
 from flask_socketio import SocketIO, emit
+from flask_cors import CORS
 
 
 # Flask Setup
 app = Flask(__name__)
 socketio = SocketIO(app)
+CORS(app)
 
 
 def preprocess_network_data(file_path):
