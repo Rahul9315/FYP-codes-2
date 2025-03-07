@@ -1,3 +1,4 @@
+import asyncio
 import numpy as np
 import pandas as pd
 import time
@@ -17,6 +18,7 @@ import socket
 from flask import Flask, render_template ,send_file
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
+import psutil
 
 
 # Flask Setup
@@ -51,9 +53,6 @@ def preprocess_network_data(file_path):
     ## Step 2: Drop Unnecessary Columns ##
     df.drop(columns=["Source IP", "Destination IP"], inplace=True)
 
-    
-
-    
     #print(df.head())
 
     return df
@@ -215,35 +214,6 @@ scores = cross_val_score(dec_classifier, X_train, y_train, cv=5)
 #print(f"Cross-Validation Accuracy: {scores.mean():.4f} ± {scores.std():.4f}")
 
 
-"""
-#prediction in new dataset 
-
-new23 ="testing.csv"
-new_data_test = preprocess_network_data_2(new23, scaler, dropped_cols)
-
-df_original = pd.read_csv(new23)
-
-new_data_test_pridiction = dec_classifier.predict(new_data_test)
-
-df_original["Predicted Class"] = new_data_test_pridiction
-df_original['Predicted Class'] = df_original['Predicted Class'].map({0 : 'normal', 1: 'anomaly'})
-df_original.to_csv("predicted_results.csv", index=False)
-
-print("Predictions saved in 'predicted_results.csv'")
-
-
-"""
-
-
-
-
-
-
-
-
-#  Network Interface (Change accordingly)
-INTERFACE = "WiFi"  # Use "eth0" for wired, "wlan0" for Wi-Fi
-
 # Get system's IP address
 def get_system_ip(): ##used this method to detect IP regardless if I am using ethernet (eth0 , enp0s3) or wifi (wlan ,wlan0, wifi)
     try:
@@ -269,17 +239,6 @@ def download_csv_file():
         print(f"Data saved {csv_filename} here")
 
 
-
-# Capture TCP, UDP, ICMP Packets
-capture = pyshark.LiveCapture(interface=INTERFACE, bpf_filter="tcp or udp or icmp")
-
-print("Capturing Live Packets & Predicting Anomalies...\n")
-
-# Store captured packet details
-packet_data = []
-packet_data_for_csv_with_detection = []
-csv_filename = "done.csv"
-
 def capture_live_packets():
 
     global capturing
@@ -287,6 +246,7 @@ def capture_live_packets():
 
     capturing = 1 
     system_ip = get_system_ip()
+    
 
     # Capture and process packets
     for packet in capture.sniff_continuously():  # Adjust packet count as needed else contonously it run 
@@ -295,11 +255,6 @@ def capture_live_packets():
             if capturing == 2 : # when capturing is false
                 print("\nStopping Live Capture...\n")
                 break  # Exit loop when stop button is clicked
-
-            #if capturing == 3 :
-                
-            #    print("\n\n\n\n\ndownload success /n*************************************************************************************************")
-             #   break
 
             packet_counter += 1  # Increment packet count
 
@@ -404,6 +359,37 @@ def capture_live_packets():
         except Exception as e:
             print(f"Error processing packet: {e}\n")
 
+def get_network_interfaces(): # interfaces like eth0 for wired or wifi or wlan0
+    return list(psutil.net_if_addrs().keys())
+
+def start_packet_capture(interface):
+    global capture
+    if capture:
+        capture.close()
+
+    # Ensure an event loop exists for the current thread
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    capture = pyshark.LiveCapture(interface=interface, bpf_filter="tcp or udp or icmp")
+    print(f"Switched to {interface}. Starting new packet capture...\n")
+
+#  Network Interface (Change accordingly)
+INTERFACE = "null"  # Use "eth0" for wired, "wlan0" for Wi-Fi
+#capture = None
+# Capture TCP, UDP, ICMP Packets
+capture = pyshark.LiveCapture(interface=INTERFACE, bpf_filter="tcp or udp or icmp")
+
+print("Capturing Live Packets & Predicting Anomalies...\n")
+
+# Store captured packet details
+packet_data = []
+packet_data_for_csv_with_detection = []
+csv_filename = "done.csv"
+
 
 # Route for HTML Page
 @app.route("/")
@@ -413,7 +399,17 @@ def index():
     packet_counter = 0  # Reset packet count
     packet_data_for_csv_with_detection.clear() # Empty the packets list 
     count_Normal_Anomaly = {"normal": 0, "anomaly": 0}  # Reset anomaly/normal counts
-    return render_template("UI_2.html")
+    return render_template("UI_2.html", interfaces=get_network_interfaces())
+
+@socketio.on('select_interface')
+def handle_interface_selection(data):
+    global INTERFACE
+    INTERFACE = data['interface']
+    print(f"Selected Network Interface: {INTERFACE}")
+    start_packet_capture(INTERFACE)
+    #capture = pyshark.LiveCapture(interface=INTERFACE, bpf_filter="tcp or udp or icmp")
+    socketio.emit('interface_updated', {'interface': INTERFACE})  # Send update to the frontend
+
 
 # Start Packet Capture in Background
 @socketio.on("start_capture")
@@ -453,4 +449,5 @@ def serve_download_csv():
 
 # Run Flask App
 if __name__ == "__main__":
+    #start_packet_capture(INTERFACE)  # Start capture initially
     socketio.run(app, debug=True)

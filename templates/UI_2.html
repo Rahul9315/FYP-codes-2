@@ -109,12 +109,21 @@
          
             <div class="top">
                 <div class="top-left">
+                    
+                    <p><strong>Choose Network Ty<span title="This field is mandatory">pe * (Mandatory) : </span></strong> <select id="interfaceDropdown">
+                        <option value="Null" selected disabled>-- Select Network Interface --</option> 
+                        {% for interface in interfaces %}
+                            <option value="{{ interface }}">{{ interface }}</option>
+                        {% endfor %}
+                    </select>
+                    </p>
+                    <p><strong>Current Selected Network:</strong> <span id="selectedInterface">Null</span></p>
                     <p><strong>System IP Address:</strong> <span id="system-ip">Loading...</span></p>
                     <p><strong>No. of Packets Scanned:</strong> <span id="packet-count">0</span></p>
                     <p><strong>Start Time: </strong> <span id="start-time">Not Started</span></p>
                     <p><strong>End Time: </strong> <span id="end-time">Not Stopped</span></p>
                     <p><strong>Duration: </strong> <span id="duration">0s</span></p>
-                    <button onclick="startCapture()">Start Packet Capture</button>
+                    <button id="startButton" onclick="startCapture()">Start Packet Capture</button>
                     <button style="background: red;" onclick="stopCapture()">Stop Packet Capture</button>
                 </div>
                 <div class="top-right">
@@ -166,7 +175,34 @@
                         var timestamps = [];
                         var packetLengths = [];
 
+                        // Disable Start Button Initially
+                        startButton.disabled = true;
+
+                        // Enable Start Button on Network Selection
+                        interfaceDropdown.addEventListener("change", function () {
+                            var selectedInterface = this.value;
+                            if (selectedInterface) {
+                                startButton.disabled = false;
+                                socket.emit("select_interface", { interface: selectedInterface });
+                            }
+                        });
+/*
+                        document.getElementById("interfaceDropdown").addEventListener("change", function() {
+                            var selectedInterface = this.value;
+                            socket.emit("select_interface", { interface: selectedInterface });
+                        });
+*/
+                        socket.on("interface_updated", function(data) {
+                            document.getElementById("selectedInterface").innerText = data.interface;
+                        });
+
                         function startCapture() {
+
+                            var selectedInterface = interfaceDropdown.value;
+                            if (selectedInterface == "Null") {
+                                alert("Please choose a Network Type before starting packet capture.");
+                                return;
+                            }
                             startTime = new Date(); // Capture start time
                             document.getElementById("start-time").innerText = startTime.toLocaleTimeString(); // Display start time
                             document.getElementById("end-time").innerText = "Running..."; // Reset end time
