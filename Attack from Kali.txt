@@ -1,3 +1,7 @@
+source my_venv_env/activate
+python file_name.py
+deactivate
+
 SYN Flood Attack
 sudo hping3 -S -c 2100 -p++20 <ip addtess> 
 to stop crtl + c and then sudo pkill -9 hping3
