@@ -5,6 +5,7 @@ let durationInterval;
 // Initialize Data Arrays
 var timestamps = [];
 var packetLengths = [];
+let blockedIPs = [];
 
 // Disable Start Button Initially
 startButton.disabled = true;
@@ -80,7 +81,11 @@ function loadBlockedIPs() {
             let blockedContainer = document.getElementById("blocked-container");
             blockedContainer.innerHTML = "";
 
+            blockedIPs = []; // yo empty the list or  reset
+
             data.blocked_ips.forEach(ipObj => {
+
+                blockedIPs.push(ipObj.ip_address); // Store IP in blocked list
                 let blockedDiv = document.createElement("div");
                 blockedDiv.className = "packet-box blocked"; // Similar styling as anomaly-container
 
@@ -168,8 +173,16 @@ let uniqueAnomalyIPs = new Set();
 
 var anomalyIPCount = {};  
 
+let no_of_packets = 0;
+let no_of_anomaly_packet = 0;
+let no_of_normal_packet = 0;
 
 socket.on("new_packet", function(data) {
+
+    if (blockedIPs.includes(data.src_ip)) {
+        console.log(`Ignoring packet from blocked IP: ${data.src_ip}`); // Debugging
+        return; // Stop processing this packet
+    }
     var packetDiv = document.createElement("div");
     packetDiv.className = "packet-box " + (data.status === "Anomaly" ? "anomaly" : "normal");
     packetDiv.innerHTML = `<strong>Size:</strong> ${data.packet_length} | <strong>Packet:</strong> ${data.src_ip} → ${data.dst_ip} | <strong>Service:</strong> ${data.service} | <strong>Protocol:</strong> ${data.protocol} | <strong>Status:</strong> ${data.status}`;
@@ -177,12 +190,18 @@ socket.on("new_packet", function(data) {
 
     // Update system IP and packet count
     document.getElementById("system-ip").innerText = data.system_ip;
-    document.getElementById("packet-count").innerText = data.packet_count;
+    //document.getElementById("packet-count").innerText = data.packet_count;
+
+
+    no_of_packets++;
+    document.getElementById("packet-count").innerText = no_of_packets;
 
     // If the packet is Anomaly, also display it in Anomaly section
     if (data.status === "Anomaly") {
         var anomalyDiv = document.createElement("div");
         anomalyDiv.className = "packet-box anomaly";
+
+        no_of_anomaly_packet++;
         
         // Object to store counts of packets for each anomaly IP                          
 
@@ -239,13 +258,16 @@ socket.on("new_packet", function(data) {
         Plotly.update("live-graph", { x: [timestamps], y: [packetLengths] });
 
             
+    } else {
+        no_of_normal_packet++;
     }
 
     timestamps.push(new Date(data.timestamp * 1000));  // Convert timestamp
     packetLengths.push(data.packet_length);
 
     Plotly.react("pie-chart", [{
-        values: [data.count_Normal_Anomaly.normal, data.count_Normal_Anomaly.anomaly],
+        //values: [data.count_Normal_Anomaly.normal, data.count_Normal_Anomaly.anomaly],
+        values: [no_of_normal_packet,no_of_anomaly_packet],
         labels: ["Normal", "Anomaly"],
         type: "pie",
         marker: { colors: ["#28a745", "#dc3545"] }
