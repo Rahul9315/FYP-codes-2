@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import platform
+import socket
 from supabase import create_client, Client
 
 # Supabase Credentials (Replace with your actual values)
@@ -14,6 +15,10 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = Flask(__name__)
 CORS(app)
 
+# Get current device (hostname)
+def get_device_name():
+    return socket.gethostname()
+
 # Check if OS is Windows or Linux
 def is_windows():
     return platform.system().lower() == "windows"
@@ -21,36 +26,45 @@ def is_windows():
 # Function to block an IP address
 def block_ip(ip):
     try:
+        device_name = get_device_name()  # Get device hostname
+
         if is_windows():
             os.system(f'netsh advfirewall firewall add rule name="Block_{ip}" dir=in action=block remoteip={ip}')
-            i = 0
         else:
-            #os.system(f'sudo iptables -A INPUT -s {ip} -j DROP')
-            #os.system(f'sudo ufw deny from {ip}')
-            i = 2
+            os.system(f'sudo iptables -A INPUT -s {ip} -j DROP')
+            os.system(f'sudo ufw deny from {ip}')
 
-        # Save the IP in Supabase only when the user clicks "Block IP"
-        supabase.table("blocked_ips").insert({"ip_address": ip, "status": "blocked"}).execute()
-        print(f"Blocked & Saved IP: {ip}")
-        return f"Blocked IP: {ip}"
+        # Save IP & Hostname to Supabase
+        supabase.table("blocked_ips").insert({
+            "ip_address": ip,
+            "hostname": device_name,  # Save hostname
+            "status": "blocked"
+        }).execute()
+
+        print(f"Blocked & Saved IP: {ip} (Device: {device_name})")
+        return f"Blocked IP: {ip} (Device: {device_name})"
     except Exception as e:
         return f"Error blocking IP {ip}: {str(e)}"
 
-# Function to unblock an IP address
+# Function to unblock an IP address (Matching hostname)
 def unblock_ip(ip):
     try:
-        if is_windows():
-            #os.system(f'netsh advfirewall firewall delete rule name="Block_{ip}"')
-            i = 0
-        else:
-            #os.system(f'sudo iptables -D INPUT -s {ip} -j DROP')
-            #os.system(f'sudo ufw delete deny from {ip}')
-            i = 2
+        device_name = get_device_name()  # Get current hostname
 
-        # Remove the IP from Supabase when unblocked
-        supabase.table("blocked_ips").delete().eq("ip_address", ip).execute()
-        print(f"✅ Unblocked & Removed IP: {ip}")
-        return f"Unblocked IP: {ip}"
+        if is_windows():
+            os.system(f'netsh advfirewall firewall delete rule name="Block_{ip}"')
+        else:
+            os.system(f'sudo iptables -D INPUT -s {ip} -j DROP')
+            os.system(f'sudo ufw delete deny from {ip}')
+
+        # Remove the IP from Supabase if it matches the current hostname
+        supabase.table("blocked_ips").delete().match({
+            "ip_address": ip,
+            "hostname": device_name  # Ensure it only removes entries from this device
+        }).execute()
+
+        print(f"✅ Unblocked & Removed IP: {ip} (Device: {device_name})")
+        return f"Unblocked IP: {ip} (Device: {device_name})"
     except Exception as e:
         return f"Error unblocking IP {ip}: {str(e)}"
 
@@ -78,14 +92,21 @@ def api_unblock_ip():
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 
-# API to list all blocked IPs
+# API to list blocked IPs for the current device only
 @app.route('/blocked_ips', methods=['GET'])
 def api_list_blocked_ips():
     try:
-        response = supabase.table("blocked_ips").select("ip_address", "status").execute()
+        device_name = get_device_name()  # Get the current device's hostname
+
+        # Fetch only IPs associated with this hostname
+        response = supabase.table("blocked_ips").select("ip_address", "hostname", "status") \
+            .eq("hostname", device_name) \
+            .execute()
+
         return jsonify({"blocked_ips": response.data})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(port=5001, debug=True)
