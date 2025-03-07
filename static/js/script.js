@@ -180,7 +180,7 @@ let no_of_normal_packet = 0;
 socket.on("new_packet", function(data) {
 
     if (blockedIPs.includes(data.src_ip)) {
-        console.log(`Ignoring packet from blocked IP: ${data.src_ip}`); // Debugging
+        //console.log(`Ignoring packet from blocked IP: ${data.src_ip}`); // Debugging
         return; // Stop processing this packet
     }
     var packetDiv = document.createElement("div");
