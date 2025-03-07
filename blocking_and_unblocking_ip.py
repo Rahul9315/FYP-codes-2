@@ -22,7 +22,7 @@ def is_windows():
 def block_ip(ip):
     try:
         if is_windows():
-            #os.system(f'netsh advfirewall firewall add rule name="Block_{ip}" dir=in action=block remoteip={ip}')
+            os.system(f'netsh advfirewall firewall add rule name="Block_{ip}" dir=in action=block remoteip={ip}')
             i = 0
         else:
             #os.system(f'sudo iptables -A INPUT -s {ip} -j DROP')
