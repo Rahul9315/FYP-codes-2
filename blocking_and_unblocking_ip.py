@@ -63,7 +63,7 @@ def unblock_ip(ip):
             "hostname": device_name  # Ensure it only removes entries from this device
         }).execute()
 
-        print(f"✅ Unblocked & Removed IP: {ip} (Device: {device_name})")
+        print(f"Unblocked & Removed IP: {ip} (Device: {device_name})")
         return f"Unblocked IP: {ip} (Device: {device_name})"
     except Exception as e:
         return f"Error unblocking IP {ip}: {str(e)}"

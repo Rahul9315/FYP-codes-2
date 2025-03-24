@@ -15,7 +15,7 @@ capture = pyshark.LiveCapture(interface=INTERFACE, bpf_filter="udp or tcp or icm
 # Define CSV file name with timestamp
 csv_filename = f"captured_packets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
-print(f"🔍 Capturing Live Packets and Saving to {csv_filename}...\n")
+print(f"Capturing Live Packets and Saving to {csv_filename}...\n")
 
 # Open CSV file and define header
 with open(csv_filename, mode="w", newline="") as file:
@@ -121,6 +121,6 @@ with open(csv_filename, mode="w", newline="") as file:
             print(f"✔ Packet Captured: {src_ip}:{src_port} → {dst_ip}:{dst_port} | Protocol: {protocol_name}")
 
         except Exception as e:
-            print(f"⚠️ Error processing packet: {e}\n")
+            print(f"Error processing packet: {e}\n")
 
-print(f"\n✅ Capture complete! Packets saved in {csv_filename}")
+print(f"\nCapture complete! Packets saved in {csv_filename}")

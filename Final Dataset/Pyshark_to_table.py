@@ -115,4 +115,4 @@ for packet in capture.sniff_continuously(packet_count=20):  # Capture 20 packets
 
 # Print packets in tabular format
 headers = ["Ethernet Type", "Packet Length", "Service", "Source IP", "Destination IP", "Source Port", "Destination Port", "Protocol", "TCP Flags", "Checksum", "TCP Window Size", "ICMP Type" ,"Detections"]
-print(tabulate(packet_data, headers=headers, tablefmt="fancy_grid"))
+print(tabulate(packet_data, headers=headers))
