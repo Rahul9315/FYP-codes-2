@@ -351,7 +351,7 @@ def capture_live_packets():
             socketio.emit("new_packet", packet_data_to_send)
 
             # Display Real-Time Results
-            print(f"Packet: {src_ip} → {dst_ip} |Service: {service} | Protocol: {protocol_name} | Network Satatus: {predictiom}")
+            #print(f"Packet: {src_ip} → {dst_ip} |Service: {service} | Protocol: {protocol_name} | Network Satatus: {predictiom}")
 
             # Store Packet Data for CSV
             packet_data_for_csv_with_detection.append([eth_type, packet_length, service, src_ip, dst_ip, src_port, dst_port, protocol_name, tcp_flags, checksum, tcp_window_size, icmp_type, predictiom])
