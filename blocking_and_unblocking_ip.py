@@ -24,7 +24,7 @@ def is_windows():
     return platform.system().lower() == "windows"
 
 # Function to block an IP address
-def block_ip(ip):
+def block_ip(ip , status):
     try:
         device_name = get_device_name()  # Get device hostname
 
@@ -38,7 +38,7 @@ def block_ip(ip):
         supabase.table("blocked_ips").insert({
             "ip_address": ip,
             "hostname": device_name,  # Save hostname
-            "status": "blocked"
+            "status": status
         }).execute()
 
         print(f"Blocked & Saved IP: {ip} (Device: {device_name})")
@@ -73,10 +73,12 @@ def unblock_ip(ip):
 def api_block_ip():
     try:
         ip = request.json.get("ip")
-        if ip:
-            message = block_ip(ip)
+        status = request.json.get("status")  # Extract status
+        if ip and status:
+            message = block_ip(ip, status)
             return jsonify({"message": message, "success": True})
-        return jsonify({"error": "No IP provided", "success": False}), 400
+        return jsonify({"error": "Missing IP or status", "success": False}), 400
+
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 

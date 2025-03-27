@@ -99,7 +99,7 @@ function loadBlockedIPs() {
                     unblockIP(ipObj.ip_address); // Call function to unblock IP
                 };
 
-                blockedDiv.innerHTML = `<strong>Blocked IP:</strong> ${ipObj.ip_address} <strong>Status:</strong> ${ipObj.status}  .`;
+                blockedDiv.innerHTML = `<strong>IP:</strong> ${ipObj.ip_address} <strong>Status:</strong> ${ipObj.status}  `;
                 blockedDiv.appendChild(unblockButton);
                 blockedContainer.prepend(blockedDiv);
             });
@@ -117,16 +117,16 @@ function updateDuration() {
 }
 
 // Function to block an IP when the "Block IP" button is clicked
-function blockIP(ip) {
+function blockIP(ip , status) {
     fetch("http://127.0.0.1:5001/block_ip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ip: ip })
+        body: JSON.stringify({ ip: ip ,status: status })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(`IP ${ip} has been blocked and saved to the database.`);
+            //alert(`IP ${ip} has been blocked and saved to the database.`);
             loadBlockedIPs(); // Refresh the blocked IPs list
         } else {
             alert("Error blocking IP. Please try again.");
@@ -210,6 +210,13 @@ socket.on("new_packet", function(data) {
             if (anomalyIPCount[data.src_ip]) {
                 anomalyIPCount[data.src_ip] += 1; // Increment count
 
+
+                // Automated Blocking
+                if (anomalyIPCount[data.src_ip] == 10) {
+                    blockIP(data.src_ip , "System Blocked");  // Call function to save the IP
+                    blockedIPs.push(data.src_ip);
+                }
+
                 // Update the packet count in the UI
                 var packetCountElement = document.getElementById(`count-${data.src_ip}`);
                 if (packetCountElement) {
@@ -233,7 +240,8 @@ socket.on("new_packet", function(data) {
                 // On click, prevent default link behavior and call the function
                 blockLink.onclick = function(event) {
                     event.preventDefault();  // Prevents the anchor from navigating
-                    blockIP(data.src_ip);  // Call function to save the IP
+                    blockIP(data.src_ip , "Blocked by User");  // Call function to save the IP
+                    blockedIPs.push(data.src_ip);
                 };
 
                 // Set inner HTML with a unique span for count updates
