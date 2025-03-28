@@ -401,6 +401,10 @@ def index():
     count_Normal_Anomaly = {"normal": 0, "anomaly": 0}  # Reset anomaly/normal counts
     return render_template("UI_2.html", interfaces=get_network_interfaces())
 
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
 @socketio.on('select_interface')
 def handle_interface_selection(data):
     global INTERFACE

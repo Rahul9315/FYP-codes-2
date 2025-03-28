@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NID system</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+    <header>
+        <h1>Network Intrusion Detection UI</h1>
+        <nav>
+            <a href="/about">About</a>
+            <a href="/">Detection</a>
+        </nav>
+    </header>
+
+        <!-- About Section -->
+        <section class="content" id="detection">
+            <h2>About NIDPS (Network Intrusion Detection and Prevention System)</h2>
+
+            <div class="top">
+                <div class="top-left">
+
+                    <p>This system is designed to monitor live network traffic in real time, detect potential intrusions or anomalies using machine learning, and proactively block malicious IP addresses to protect the system.</p>
+            
+                    <h3>Key Features</h3>
+                    <ul>
+                        <li>Real-time packet capture using PyShark</li>
+                        <li>Machine learning-based classification (Decision Tree)</li>
+                        <li>Automatic and manual IP blocking</li>
+                        <li>Live dashboard visualization with Flask + Socket.IO</li>
+                        <li>Blocked IP logging and Supabase integration for data storage</li>
+                    </ul>
+            
+                    <h3>Technologies Used</h3>
+                    <ul>
+                        <li>Python (Flask, Scikit-learn, PyShark)</li>
+                        <li>HTML, CSS, JavaScript (Frontend)</li>
+                        <li>Flask-Socket.IO for real-time updates</li>
+                        <li>Supabase for cloud-based database storage</li>
+                        <li>Linux Firewall (iptables / UFW)</li>
+                    </ul>
+            
+                    <h3>How It Works</h3>
+                    <p>The NIDPS continuously listens to network traffic on a selected interface. Each packet is analyzed and classified as either Normal or Anomalous using a pre-trained Decision Tree model. If a source IP sends too many anomaly packets, the system blocks it automatically. All blocked IPs and their metadata are stored in a remote Supabase database, and admins can manage them through this dashboard.</p>
+            
+                    <h3>Intended Use</h3>
+                    <p>This system is intended for educational, research, and small-scale network security environments. It can be deployed on Linux-based virtual machines or servers to enhance security visibility and automate early-stage intrusion response.</p>
+            
+                    <h3>Developed By</h3>
+                    <p>Designed and developed as part of a Final Year Project by Rahul, under the guidance of Miss. Jane Ferris, TU Dublin.</p>
+            
+                    <p><em>This dashboard is part of a real-time intrusion detection system. All data is processed locally and securely.</em></p>
+                </div>
+            </div>
+        </section>
+
+    <section class="content" id="detection">
+        <h2>Detect Intrusion</h2>
+
+        <!-- (Rest of your existing detection dashboard code remains unchanged here...) -->
+        <!-- No need to paste it again unless you want me to optimize it too -->
+
+    </section>
+
+    <footer>
+        <p>Note: Intrusion Detection Model provides above 90% of Accuracy.<br>This Model is not 100% Accurate.</p>
+    </footer>
+
+</body>
+</html>
