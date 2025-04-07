@@ -1,2 +1,14 @@
-pip install numpy pandas pyshark flask flask-socketio flask-cors scikit-learn matplotlib seaborn psutil flask flask-cors supabase
-
+asyncio
+numpy
+pandas
+pyshark
+scikit-learn
+seaborn
+matplotlib
+flask
+flask-socketio
+flask-cors
+psutil
+keyboard
+requests
+supabase

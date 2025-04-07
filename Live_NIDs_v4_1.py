@@ -2,6 +2,7 @@ import asyncio
 import numpy as np
 import pandas as pd
 import time
+import platform
 import os
 import csv
 import pyshark
@@ -362,6 +363,10 @@ def capture_live_packets():
 def get_network_interfaces(): # interfaces like eth0 for wired or wifi or wlan0
     return list(psutil.net_if_addrs().keys())
 
+# Check if OS is Windows or Linux
+def is_windows():
+    return platform.system().lower() == "windows"
+
 def start_packet_capture(interface):
     global capture
     if capture:
@@ -373,6 +378,12 @@ def start_packet_capture(interface):
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+
+
+    if is_windows():
+        print("Windows OS Detected")
+    else:
+        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
 
     capture = pyshark.LiveCapture(interface=interface, bpf_filter="tcp or udp or icmp")
     print(f"Switched to {interface}. Starting new packet capture...\n")
